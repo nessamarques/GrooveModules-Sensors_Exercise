@@ -11,9 +11,20 @@ const int pinButton =0;
 const int pinServo = 6;
 const int pinRelay = 5;
 
+float target_temperature = 0;
+float desired_temperature = 30;
+
+//int target_humidity = 0;
+//int water_temperature = 0;
+//int electric_cost = 0;
+//int gas_cost = 0;
+//bool remote_button;
+
+char state = 'O';
+
 Servo myservo;
 
-int getTempSensorValue();
+float getTempSensorValue();
 int getHumiSensorValue();
 
 void ServoHandle(int val);
@@ -23,51 +34,64 @@ void setup() {
   Serial.begin(9600);
   pinMode(pinButton,INPUT);
   myservo.attach(pinServo);
-  myservo.write(0);
+  //myservo.write(0);
   lcd.begin(16, 2);
-
 }
 
 void loop() {
-  parse_command_from_serial();
+
   delay(100);
   isButtonPressed();
 
-  int temp = getTempSensorValue();
-  int humi = getHumiSensorValue();
+  //parse_command_from_serial();
+  target_temperature = getTempSensorValue();
+  
+  //target_humidity = getHumiSensorValue();
+  //lcd.print("C|Humi:");
+  //lcd.print(humi);
 
   lcd.clear();
-  lcd.print("Temp:");
-  lcd.print(temp);
-  lcd.print("C|Humi:");
-  lcd.print(humi);
+  lcd.print(state);
+  lcd.print("   ");
+  lcd.print(target_temperature);
+  lcd.print(" C ");
+  lcd.setCursor(0,1);
+  lcd.print("    ");
+  lcd.print(desired_temperature);
+  lcd.print(" C ");
 }
 
-int isButtonPressed(){
-  int state = 0;
-  if(digitalRead(pinButton)){
-    while(digitalRead(pinButton));
-    state = 1;
-    
-    //ServoHandle(200);
-    //RelayHandle(0);  
-    Serial.println("Button pressed!");
-  }
 
+
+int isButtonPressed(){
+  if(digitalRead(pinButton)){
+    
+    while(digitalRead(pinButton))
+    {
+      Serial.println("Button pressed!");
+    
+      if(desired_temperature >= target_temperature){
+        state = 'O';
+      }
+      else {
+        // TODO: Validate E x G if button pressed
+        state = 'E';
+  
+        RelayHandle(1);
+        ServoHandle(200);
+      } 
+    }  
+  }
   return state;
 }
 
-int getTempSensorValue(){
-  int temper =(int) TH02.ReadTemperature();
-  Serial.print("\nTemperature: ");
-  Serial.println(temper);  
+float getTempSensorValue(){
+  float temper =(float) TH02.ReadTemperature(); 
   return temper;
 }
 
 int getHumiSensorValue(){
   int humidity =(int)TH02.ReadHumidity();
-  Serial.print("\nHumidity: ");
-  Serial.println(humidity);  
   return humidity;
 }
 
@@ -75,19 +99,11 @@ void ServoHandle(int val){
   static unsigned long curt = millis();
   if(millis()-curt > 1000){
     myservo.write(val);
-
-    Serial.print("\nServoHandle: ");
-    Serial.println(val);
-    
     curt = millis();
   }
 }
 
 void RelayHandle(int val){
-
-  Serial.print("\RelayHandle: ");
-  Serial.println(val);
-  
   if(val==1) {
     digitalWrite(pinRelay,HIGH);
   }
@@ -112,10 +128,10 @@ void apply_command(char command, char value[]) {
 }
 
 void parse_command_from_serial() {
-  
+
   while (Serial.available()) {
-  
     char command = Serial.read();
+    
     int index;
     char value[10] = "\0";
     
@@ -124,10 +140,10 @@ void parse_command_from_serial() {
       
       if (value[index] == '\n' || value[index] == ',') {
         value[index] = '\0';
+        
         break;  // command termination character
       }
     }
-    
     apply_command(command, value);
   }
 }
