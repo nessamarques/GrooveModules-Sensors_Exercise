@@ -72,27 +72,36 @@ int isButtonPressed(){
       else {
         RelayHandle(0);
 
-        if(electric_cost < gas_cost){
-          state = 'E';
-        }
-
         if(gas_cost < electric_cost){          
-          state = 'G';
-          ServoHandle(200);
+
           moisture_sensor = (gas_cost * (1 - (moisture_level/1000) * 8));
 
           if(moisture_sensor >= 0 && moisture_sensor <= 950)
           {
-            Serial.println("gas heater efficient");
+            GasHeater();
           }
           else{
-            Serial.print("gas heater inefficient");
+            ElectricHeater();
           }
+        }
+        else{
+          ElectricHeater();
         }
       } 
     }  
   }
   return state;
+}
+
+void GasHeater()
+{
+  state = 'G';
+  ServoHandle(200);
+}
+
+void ElectricHeater()
+{
+  state = 'E';
 }
 
 float getTempSensorValue(){
